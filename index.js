@@ -5,7 +5,7 @@ const cors = require('cors')
 const port = process.env.PORT || 3000
 
 //ROUTES
-const userRoutes = require('./API_registerApp/api/UserRoutes')
+const userRoutes = require('./api/UserRoutes')
 
 const app = express()
 app.use(cors())

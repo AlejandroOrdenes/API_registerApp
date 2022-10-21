@@ -1,5 +1,10 @@
 const router = require('express').Router()
 const User = require('../models/User')
+const nodemailer = require("nodemailer");
+
+const CLIENT_ID = "977290837374-aub2k2t0imad688mkrq96ffi29qmokso.apps.googleusercontent.com"
+const CLIENT_SECRET = ''
+const ACCESS_TOKEN = 'ya29.a0Aa4xrXMyPCxfz-z08yofRcfkvYgbbGJay4CTAqD48tsBEKU84Ja7XkqQ0fjJSe4OJSetsAJ7JXQ8jHjswy_92JECvK0XD0R0UajwejQfZZTTYbAxtmsfJYoxi0aJfVv2-i9t8dPd7xBXVkTVxnDcQS1kpBm3aCgYKATASARASFQEjDvL9ONW4BFdTzMf00q1mwl1WDQ0163'
 
 router.get('/', (req, res) => {
     User.find().then(users => {
@@ -38,6 +43,48 @@ router.post('/login', (req, res) => {
     })
 })
 
+router.post('/recovery', async (req, res) => {
+        
+        if( await userExists(req.body.email)){
+            const user = await User.findOne({email: req.body.email.toLowerCase().trim()})
+            res.status(200).json({success: "EMAIL ENVIADO!!"})
+            sendEmail(req.body.email, user.password)
+        } else {
+            res.status(401).json({error: 'Email incorrecto!'})
+        }
+})
+
+function sendEmail(userEmail, userPass) {
+    try {
+
+        const transport = nodemailer.createTransport({
+            service: 'gmail',
+            auth: {
+                type: 'OAUTH2',
+                user: 'registerappduoc@gmail.com',
+                clientId: CLIENT_ID,
+                clientSecret: CLIENT_SECRET,
+                accessToken: ACCESS_TOKEN
+            }
+        })
+
+        const mailOptions = {
+            from: 'registerappduoc@gmail.com',
+            to: userEmail,
+            subject: 'Restablecer contraseña',
+            text: 'Esta es tu contraseña!!',
+            html: '<p>Restablecer Contraseña, esta es tu contraseña!!<p>' +  userPass
+        }
+
+        const result = transport.sendMail(mailOptions)
+
+        return result
+        
+    } catch (error) {
+        return error
+    }
+}
+
 const userExists = async (email) => {
    const user = await User.findOne({email: email.toLowerCase().trim()})
 
@@ -47,5 +94,9 @@ const userExists = async (email) => {
     return false
    }
 }
+
+
+
+
 
 module.exports = router
