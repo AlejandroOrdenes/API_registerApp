@@ -1,10 +1,20 @@
 const router = require('express').Router()
+require('dotenv').config()
 const User = require('../models/User')
-const nodemailer = require("nodemailer");
+const Asistencia = require('../models/Asistencia')
+let nodemailer = require("nodemailer");
 
-const CLIENT_ID = "977290837374-aub2k2t0imad688mkrq96ffi29qmokso.apps.googleusercontent.com"
-const CLIENT_SECRET = ''
-const ACCESS_TOKEN = 'ya29.a0Aa4xrXNTfdGWcEKtxb8hsNHKsbHn72U5hfl-LaXfF7ruDHM6MdJ8MEM0gwvl5jVYx2O4gYX9TL1PdwMTFrlbOKJgh1Ti2XJP52-WROvP2j0EnxEnDdbKSgvt6y7wKOD4ufMI1NL3GOyqe93UhjbTLspDH_zxaCgYKATASARASFQEjDvL9VKtlglcY5HJorkCsAx2s0Q0163'
+
+
+const transporter = nodemailer.createTransport({
+    host: 'smtp.gmail.com',
+    port: 587,
+    auth: {
+        user: process.env.USER,
+        pass: process.env.PASS
+    }
+})
+transporter.verify().then(console.log).catch(console.error);
 
 router.get('/', (req, res) => {
     User.find().then(users => {
@@ -48,39 +58,82 @@ router.post('/recovery', async (req, res) => {
         if( await userExists(req.body.email)){
             const user = await User.findOne({email: req.body.email.toLowerCase().trim()})
             res.status(200).json({success: "EMAIL ENVIADO!!"})
-            sendEmail(req.body.email, user.password)
+            sendEMail(req.body.email, user.password)
         } else {
             res.status(401).json({error: 'Email incorrecto!'})
         }
 })
 
-function sendEmail(userEmail, userPass) {
-    try {
-
-        const transport = nodemailer.createTransport({
-            service: 'gmail',
-            auth: {
-                type: 'OAUTH2',
-                user: 'registerappduoc@gmail.com',
-                clientId: CLIENT_ID,
-                clientSecret: CLIENT_SECRET,
-                accessToken: ACCESS_TOKEN
-            }
-        })
-
-        const mailOptions = {
-            from: 'registerappduoc@gmail.com',
-            to: userEmail,
-            subject: 'Restablecer contraseña',
-            text: 'Esta es tu contraseña!!',
-            html: '<p>Restablecer Contraseña, esta es tu contraseña!!<p>' +  userPass
+router.post('/sendQr', async (req, res) => {
+    
+    if( await userExists(req.body.userEmail)){
+        try {
+            const user = await User.findOne({email: req.body.userEmail.toLowerCase().trim()})
+            console.log("USER " + user)
+            const img = req.body.imgUrl
+            console.log("IMAGEN " + img)
+            const email = user.email
+            console.log("EMAIL USER " + email)
+            sendQR(email, img) 
+            res.status(200).json({success: "QR ENVIADO!!"})
+            console.log("EMAIL EXISTE!!")
+        } catch (error) {
+            res.status(401).json({error: "No se pudo enviar QR!!"})
+            console.log("ERROR SEND EMAIL " + error)
         }
-
-        const result = transport.sendMail(mailOptions)
-
-        return result
         
+    } else {
+        res.status(401).json({error: 'Email incorrecto!'})
+    }
+})
+
+// router.post('/scanner', async (req, res) => {
+        
+//     if( await userExists(req.body.email)){
+//         const user = await User.findOne({email: req.body.email.toLowerCase().trim()})
+//         res.status(200).json({success: "EMAIL ENVIADO!!"})
+//         sendEMail(req.body.email, user.password)
+//     } else {
+//         res.status(401).json({error: 'Email incorrecto!'})
+//     }
+
+// })
+
+
+
+function sendEMail(userEmail, data) {
+    try {
+            console.log("TYPE RECOVERY")
+            const mailOptions = {
+                to: userEmail,
+                subject: 'Restablecer contraseña',
+                text: 'Esta es tu contraseña!!',
+                html: '<p>Restablecer Contraseña, esta es tu contraseña!!<p>' +  data
+            }
+            const result = transporter.sendMail(mailOptions)
+            return result
     } catch (error) {
+        console.log(error)
+        return error
+    }
+}
+
+
+
+async function sendQR(userEmail, data) {
+    
+    try {
+            console.log("TYPE QR")
+            const mailOptions = {
+                to: userEmail,
+                subject: 'Codigo QR',
+                text: 'Codigo QR Asistencia',
+                html: '<p>Click <a href="blob:http://localhost:8100/ebfa4720-76fb-45c9-8735-6295ccbc0aec">CLICK ME </a> to reset your password</p>'                
+            }
+            const result = transporter.sendMail(mailOptions)
+            return result
+    } catch (error) {
+        console.log(error)
         return error
     }
 }
